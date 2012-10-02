@@ -1,0 +1,157 @@
+<html>
+  <head>
+    <title>Squiggle Demo</title>
+    <script src="http://d3js.org/d3.v2.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.3.3/underscore-min.js "></script>
+    <script src="squiggle.js"></script>
+
+    <style>
+      path {
+        stroke: #c00;
+        stroke-width: 3px;
+        fill:none;
+      }
+      path.cos {
+        stroke: #00c;
+      }
+
+      .axis path {
+        stroke: #333;
+        stroke-width:3px;
+      }
+      .axis text {
+        fill:#333;
+      }
+      .axis .arrow {
+        stroke-width:2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="demo">
+      <script>
+        var w = 600;
+        var h = 300;
+        var title_pad = 40
+        var x_axis_pad = 30;
+        var y_axis_pad = 60;
+
+        var vis = d3.select("#demo")
+          .append('svg:svg')
+          .attr('width', w)
+          .attr('height', h);
+        
+        /*
+
+          Here, I've generated curves of sin and cos (with an x-resolution of .05, that is, values for sin(.05), sin(.10), sin(.15), etc.).
+
+          The points are then drawn using squiggle_line, a d3 svg line that defines its y-values as d3.squiggle.value(original, 1), which means that it will add a random float between -1 and 1 to the value. Changing the second argument, or the "wiggle room", will increase or decrease how far off from the original it should be. 
+
+        */
+
+        var curve_points = function(x_min, x_max, res, fn) {
+          var points = [];
+          for (var x=x_min; x<x_max; x+=res) {
+            var pt = [x, fn(x)];
+            points.push(pt)
+          }
+          return points;
+        }
+
+        var cos_points = curve_points(0, 2*Math.PI, 0.05,
+          function(x) {return Math.cos(x)});
+        var sin_points = curve_points(0, 2*Math.PI, 0.05,
+          function(x) {return Math.sin(x)});
+
+        var max_x = _.max(cos_points, function(point) {return point[0]});
+        var max_y = _.max(cos_points, function(point) {return point[1]});
+
+        var x = d3.scale.linear().domain([0, 2*Math.PI]).range([y_axis_pad, w]);
+        var y = d3.scale.linear().domain([-1, 1]).range([title_pad, h-x_axis_pad]);
+
+        var squiggle_line = d3.svg.line()
+          .x(function(d,i) {
+            return x(d[0])
+          })
+          .y(function(d,i) {
+            var original = y(d[1], i);
+            return d3.squiggle.value(original, 1)
+          })
+          //.interpolate("basis")
+
+        vis.selectAll("cos_path")
+          .data([cos_points])
+          .enter().append("svg:path")
+          .attr("d", squiggle_line)
+          .attr("class", "cos")
+          
+
+        vis.selectAll("sin_path")
+          .data([sin_points])
+          .enter().append("svg:path")
+          .attr("d", squiggle_line)
+          .attr("class", "sin");
+
+
+        /* 
+
+          X-axis and Y-axis
+          Basically this is just a lot of ugly positioning code. The terrors of SVG are contained herein (gaze upon my padding implimentation, ye mighty, and despair!).
+
+          What's more interesting are the d3.squiggle.x_axis_paths and d3.squiggle.y_axis_paths functions, which generate the paths used in drawing the axises and their arrows.
+
+        */
+
+        axis = vis.append("svg:g").attr("class", "axis");
+
+        // X-Axis
+        var x_axis_paths = d3.squiggle.x_axis_paths({
+          x: y_axis_pad,
+          y: h - 30,
+          length: w - y_axis_pad,
+          arrow_height: 4,
+          arrow_width: 10
+        })
+
+        axis.append("svg:path")
+          .attr("d", x_axis_paths.axis)
+        
+        axis.append("svg:path")
+          .attr("d", x_axis_paths.arrow)
+          .attr("class", "arrow")
+
+        axis.append("svg:text")
+          .attr("x", (w-y_axis_pad)/2 + y_axis_pad)
+          .attr("y", h - 12)
+          .attr("style", "text-anchor: middle; font-family: Helvetica, Arial")
+          .text("Label!")
+
+        // Y-Axis
+        var y_axis_paths = d3.squiggle.y_axis_paths({
+          x: y_axis_pad,
+          y: title_pad,
+          height: h - title_pad - 30,
+          arrow_height: 10,
+          arrow_width: 4
+        })
+
+        axis.append("svg:path")
+          .attr("d", y_axis_paths.axis)
+
+        axis.append("svg:path")
+          .attr("d", y_axis_paths.arrow)
+          .attr("class", "arrow")     
+
+        axis.append("svg:text")
+          .attr("x", y_axis_pad-6)
+          .attr("y", title_pad + (h-x_axis_pad)/2)
+          .attr("transform", "rotate(-90 48 168)") // there's probably a way to calculate this, but damned if i can figure it out right now
+          .attr("style", "text-anchor: middle; font-family: Helvetica, Arial")
+          .text("Label!")
+
+      </script>
+    </div>
+
+  </body>
+</html>
